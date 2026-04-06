@@ -115,32 +115,3 @@ std::ostream& operator<<(std::ostream& out, const Rational& r)
     return out;
 }
 
-int main()
-{
-    setlocale(LC_ALL, "Russian");
-    Rational x(1, 2), y(-1, 6);
-    cout << "x = " << x << ", y = " << y << endl;
-
-    cout << "x + y = " << x + y << endl;
-    cout << "x - y = " << x - y << endl;
-
-    Rational z = x;
-    z += y;
-    cout << "x += y => " << z << endl;
-
-    cout << "++x = " << ++x << endl;
-    cout << "x++ = " << x++ << ", after: x = " << x << endl;
-
-    cout << "x == y: " << (x == y ? "true" : "false") << endl;
-    cout << "x != y: " << (x != y ? "true" : "false") << endl;
-
-    cout << "x as double = " << (double)x << endl;
-    cout << "x as int    = " << (int)x << endl;
-
-    Rational w;
-    cout << "Enter fraction (numerator denominator): ";
-    cin >> w;
-    cout << "You entered: " << w << endl;
-
-    return 0;
-}
