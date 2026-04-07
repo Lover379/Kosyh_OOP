@@ -23,6 +23,7 @@ public:
 
     bool checkDate(int d, int m, int y) const;
     void inputDate();
+    void validateAndFix();
 
     void showFormat1() const;
     void showFormat2() const;
@@ -32,7 +33,20 @@ public:
     long long daysBetween(const DateTime& other) const;
     const char* weekDay() const;
 
+    bool operator==(const DateTime& other) const;
+    bool operator!=(const DateTime& other) const;
+    bool operator<(const DateTime& other) const;
+    bool operator>(const DateTime& other) const;
+    bool operator<=(const DateTime& other) const;
+    bool operator>=(const DateTime& other) const;
+
+    DateTime operator+(int days) const;
+    DateTime operator-(int days) const;
+    int operator-(const DateTime& other) const;
+
+    friend ostream& operator<<(ostream& os, const DateTime& dt);
+    friend istream& operator>>(istream& is, DateTime& dt);
+
     static DateTime catholikEaster(int y);
     static DateTime orthodoxEaster(int y);
-}; 
-
+};
