@@ -2,7 +2,9 @@
 #include <iostream>
 #include <windows.h>
 #include <cstdio>
-#include "datetime.h"
+#include <cstdlib>
+#include <cstring>
+#include "Pro_lunu.h"
 
 using namespace std;
 
@@ -15,6 +17,19 @@ void print_time(int hms) {
     if (s < 10) cout << "0"; cout << s;
 }
 
+bool isValidDate(int d, int m, int y) {
+    if (y < 1 || m < 1 || m > 12 || d < 1) return false;
+
+    int daysInMonth[] = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+
+    if (m == 2) {
+        bool isLeap = (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0);
+        if (isLeap) daysInMonth[2] = 29;
+    }
+
+    return d <= daysInMonth[m];
+}
+
 int main() {
     SetConsoleOutputCP(1251);
     SetConsoleCP(1251);
@@ -23,96 +38,108 @@ int main() {
     char dot;
     cout << "Введите дату (дд.мм.гггг): ";
 
-    if (!(cin >> dd >> dot >> mm >> dot >> yyyy)) {
-        cout << "Ошибка ввода даты!" << endl;
+    if (!(cin >> dd >> dot >> mm >> dot >> yyyy) || dot != '.') {
+        cout << "Данные некорректны" << endl;
         return 1;
     }
 
-    DateTime targetDate(dd, mm, yyyy);
-    if (!targetDate.checkDate(dd, mm, yyyy)) {
-        cout << "Ошибка: неверная дата" << endl;
+    if (!isValidDate(dd, mm, yyyy)) {
+        cout << "Неверная дата" << endl;
         return 1;
     }
 
-    char fname[20];
-    sprintf(fname, "moon%04d.dat", yyyy);
-
+    char fname[32];
+    sprintf(fname, "%04d%02d%02d.dat", yyyy, mm, dd);
     FILE* f = fopen(fname, "r");
+
     if (!f) {
-        cout << "Файл " << fname << " не найден" << endl;
-        return 1;
+        sprintf(fname, "moon%04d.dat", yyyy);
+        f = fopen(fname, "r");
     }
 
-    char header[256];
-    if (!fgets(header, sizeof(header), f)) {
-        cout << "Ошибка чтения структуры файла." << endl;
-        fclose(f);
+    if (!f) {
+        cout << "Файл не найден" << endl;
         return 1;
     }
 
     int rise = -1, set = -1, culm = -1;
     double max_el = -99.0;
-    
-    double prev_el = 0.0; 
-    int prev_hms = -1;
-    int targetYMD = yyyy * 10000 + mm * 100 + dd;
 
-    int ymd, hms;
-    double T, R, El, Az, FI, LG;
+    bool has_prev = false;
+    int prev_ymd = -1;
+    int prev_hms = -1;
+    double prev_el = 0.0;
     bool dataFound = false;
 
-    while (fscanf(f, "%d %d %lf %lf %lf %lf %lf %lf", &ymd, &hms, &T, &R, &El, &Az, &FI, &LG) == 8) {
-        
-        if (ymd == targetYMD) {
-            dataFound = true;
+    int targetYMD = yyyy * 10000 + mm * 100 + dd;
+    int ymd, hms;
+    double T, R, El, Az, FI, LG;
+    char line[512];
 
-            if (prev_hms != -1) {
-                if (prev_el < 0 && El >= 0 && rise == -1) {
-                    double ratio = -prev_el / (El - prev_el);
-                    int p = (prev_hms / 10000) * 3600 + ((prev_hms / 100) % 100) * 60 + (prev_hms % 100);
-                    int c = (hms / 10000) * 3600 + ((hms / 100) % 100) * 60 + (hms % 100);
-                    int r = p + (int)(ratio * (c - p) + 0.5);
-                    rise = (r / 3600) * 10000 + ((r % 3600) / 60) * 100 + (r % 60);
-                }
-                if (prev_el >= 0 && El < 0 && set == -1) {
-                    double ratio = prev_el / (prev_el - El);
-                    int p = (prev_hms / 10000) * 3600 + ((prev_hms / 100) % 100) * 60 + (prev_hms % 100);
-                    int c = (hms / 10000) * 3600 + ((hms / 100) % 100) * 60 + (hms % 100);
-                    int s = p + (int)(ratio * (c - p) + 0.5);
-                    set = (s / 3600) * 10000 + ((s % 3600) / 60) * 100 + (s % 60);
+    if (!fgets(line, sizeof(line), f)) {
+        fclose(f);
+        cout << "Данные некорректны" << endl;
+        return 1;
+    }
+
+    while (fgets(line, sizeof(line), f)) {
+        int current_ymd = atoi(line);
+        if (current_ymd <= 0) continue;
+
+        if (current_ymd < targetYMD) {
+            if (targetYMD - current_ymd == 1 || current_ymd % 100 == 31 || current_ymd % 100 == 30) {
+                if (sscanf(line, "%d %d %lf %lf %lf %lf %lf %lf", &ymd, &hms, &T, &R, &El, &Az, &FI, &LG) == 8) {
+                    prev_ymd = ymd;
+                    prev_hms = hms;
+                    prev_el = El;
+                    has_prev = true;
                 }
             }
+            continue;
+        }
 
-            if (El > max_el) { 
-                max_el = El; 
-                culm = hms; 
-            }
-
-            prev_el = El; 
-            prev_hms = hms;
-        } 
-        else if (dataFound && ymd > targetYMD) {
+        if (current_ymd > targetYMD) {
             break;
         }
+
+        if (sscanf(line, "%d %d %lf %lf %lf %lf %lf %lf", &ymd, &hms, &T, &R, &El, &Az, &FI, &LG) != 8) {
+            continue;
+        }
+
+        dataFound = true;
+
+        if (has_prev) {
+            if (prev_el < 0 && El >= 0 && rise == -1) {
+                rise = hms;
+            }
+            if (prev_el >= 0 && El < 0 && set == -1) {
+                set = hms;
+            }
+        }
+
+        if (El > max_el) {
+            max_el = El;
+            culm = hms;
+        }
+
+        prev_ymd = ymd;
+        prev_hms = hms;
+        prev_el = El;
+        has_prev = true;
     }
+
     fclose(f);
 
-    if (!dataFound) { 
-        cout << "Данные на указанную дату отсутствуют в файле." << endl; 
-        return 1; 
+    if (!dataFound) {
+        cout << "Данные некорректны" << endl;
+        return 1;
     }
 
+    DateTime targetDate(dd, mm, yyyy);
     cout << "Дата: "; targetDate.showFormat1(); cout << "\n";
-    cout << "День недели: " << targetDate.weekDay() << endl;
-    
-    cout << "Восход: "; 
-    if (rise >= 0) print_time(rise); else cout << "---";
-    
-    cout << "\nКульминация: "; 
-    if (culm >= 0) print_time(culm); else cout << "---";
-    
-    cout << "\nЗаход: "; 
-    if (set >= 0) print_time(set); else cout << "---";
+    cout << "Восход Луны: "; if (rise >= 0) print_time(rise); else cout << "---";
+    cout << "\nКульминация Луны: "; if (culm >= 0) print_time(culm); else cout << "---";
+    cout << "\nЗаход Луны: "; if (set >= 0) print_time(set); else cout << "---";
     cout << endl;
 
     return 0;
