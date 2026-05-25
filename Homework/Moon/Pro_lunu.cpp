@@ -1,91 +1,137 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include <iostream>
-#include <windows.h>
 #include "datetime.h"
+#include <iomanip>
+#include <cmath>
 
 using namespace std;
 
-void print_time(int hms) {
-    int h = hms / 10000;
-    int m = (hms / 100) % 100;
-    int s = hms % 100;
-    if (h < 10) cout << "0"; cout << h << ":";
-    if (m < 10) cout << "0"; cout << m << ":";
-    if (s < 10) cout << "0"; cout << s;
+DateTime::DateTime() : dy(1), mn(1), yr(2000), hr(0), min(0), sec(0) {}
+
+DateTime::DateTime(int d, int m, int y, int hh, int mm, int ss) 
+    : dy(d), mn(m), yr(y), hr(hh), min(mm), sec(ss) {}
+
+bool DateTime::leapYear(int y) const {
+    return (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0);
 }
 
-int main() {
-    SetConsoleOutputCP(1251);
-    SetConsoleCP(1251);
+int DateTime::monthDays(int m, int y) const {
+    int days[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    if (m == 2 && leapYear(y)) return 29;
+    return days[m - 1];
+}
 
-    int dd, mm, yyyy;
+bool DateTime::checkDate(int d, int m, int y) const {
+    if (y < 1 || m < 1 || m > 12 || d < 1) return false;
+    return d <= monthDays(m, y);
+}
+
+void DateTime::inputDate() {
     char dot;
-    cout << "Введите дату (дд.мм.гггг): ";
-
-    if (!(cin >> dd >> dot >> mm >> dot >> yyyy)) return 1;
-
-    DateTime targetDate(dd, mm, yyyy);
-    if (!targetDate.checkDate(dd, mm, yyyy)) {
-        cout << "Ошибка: неверная дата" << endl;
-        return 1;
-    }
-
-    char fname[20];
-    sprintf(fname, "moon%04d.dat", yyyy);
-
-    FILE* f = fopen(fname, "r");
-    if (!f) {
-        cout << "Файл не найден" << endl;
-        return 1;
-    }
-
-    char header[256];
-    fgets(header, sizeof(header), f);
-
-    int rise = -1, set = -1, culm = -1;
-    double max_el = -99, prev_el = 99;
-    int prev_hms = -1, targetYMD = yyyy * 10000 + mm * 100 + dd;
-
-    int ymd, hms;
-    double T, R, El, Az, FI, LG;
-
-    while (fscanf(f, "%d %d %lf %lf %lf %lf %lf %lf", &ymd, &hms, &T, &R, &El, &Az, &FI, &LG) == 8) {
-        if (ymd != targetYMD) {
-            if (prev_hms != -1 && ymd > targetYMD) break;
-            prev_el = 99; prev_hms = -1;
-            continue;
+    while (true) {
+        cout << "Введите дату (дд.мм.гггг): ";
+        if (cin >> dy >> dot >> mn >> dot >> yr && checkDate(dy, mn, yr)) {
+            hr = min = sec = 0;
+            break;
         }
-
-        if (prev_hms != -1) {
-            if (prev_el < 0 && El >= 0 && rise == -1) {
-                double ratio = -prev_el / (El - prev_el);
-                int p = (prev_hms / 10000) * 3600 + ((prev_hms / 100) % 100) * 60 + (prev_hms % 100);
-                int c = (hms / 10000) * 3600 + ((hms / 100) % 100) * 60 + (hms % 100);
-                int r = p + (int)(ratio * (c - p) + 0.5);
-                rise = (r / 3600) * 10000 + ((r % 3600) / 60) * 100 + (r % 60);
-            }
-            if (prev_el >= 0 && El < 0 && set == -1) {
-                double ratio = prev_el / (prev_el - El);
-                int p = (prev_hms / 10000) * 3600 + ((prev_hms / 100) % 100) * 60 + (prev_hms % 100);
-                int c = (hms / 10000) * 3600 + ((hms / 100) % 100) * 60 + (hms % 100);
-                int s = p + (int)(ratio * (c - p) + 0.5);
-                set = (s / 3600) * 10000 + ((s % 3600) / 60) * 100 + (s % 60);
-            }
-        }
-
-        if (El > max_el) { max_el = El; culm = hms; }
-        prev_el = El; prev_hms = hms;
+        cout << "Ошибка: неверный формат или дата!" << endl;
+        cin.clear();
+        cin.ignore(10000, '\n');
     }
-    fclose(f);
+}
 
-    if (prev_hms == -1) { cout << "Данные не найдены" << endl; return 1; }
+void DateTime::showFormat1() const {
+    cout << setfill('0') << setw(2) << dy << "."
+         << setw(2) << mn << "." << yr << " ";
+}
 
-    cout << "Дата: "; targetDate.showFormat1();
-    cout << "День недели: " << targetDate.weekDay() << endl;
-    cout << "Восход: "; if (rise >= 0) print_time(rise); else cout << "---";
-    cout << "\nКульминация: "; if (culm >= 0) print_time(culm); else cout << "---";
-    cout << "\nЗаход: "; if (set >= 0) print_time(set); else cout << "---";
-    cout << endl;
+void DateTime::showFormat2() const {
+    cout << yr << "/" << setw(2) << mn << "/" << setw(2) << dy << " ";
+}
 
-    return 0;
+void DateTime::showFormat3() const {
+    const char* months[] = { "Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек" };
+    cout << dy << " " << months[mn - 1] << " " << yr << " ";
+}
+
+void DateTime::showISO() const {
+    cout << yr << "-" << setfill('0') << setw(2) << mn << "-" << setw(2) << dy;
+}
+
+const char* DateTime::weekDay() const {
+    int q = dy;
+    int m = mn;
+    int y = yr;
+    if (m < 3) {
+        m += 12;
+        y--;
+    }
+    int k = y % 100;
+    int j = y / 100;
+    int h = (q + 13 * (m + 1) / 5 + k + k / 4 + j / 4 + 5 * j) % 7;
+    
+    const char* days[] = { "Суббота", "Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница" };
+    return days[h];
+}
+
+long long DateTime::totalDays() const {
+    long long total = dy;
+    for (int y = 1; y < yr; ++y) {
+        total += (leapYear(y) ? 366 : 365);
+    }
+    for (int m = 1; m < mn; ++m) {
+        total += monthDays(m, yr);
+    }
+    return total;
+}
+
+long long DateTime::daysBetween(const DateTime& other) const {
+    return llabs(this->totalDays() - other.totalDays());
+}
+
+DateTime DateTime::catholikEaster(int y) {
+    int a = y % 19;
+    int b = y / 100;
+    int c = y % 100;
+    int d = b / 4;
+    int e = b % 4;
+    int f = (b + 8) / 25;
+    int g = (b - f + 1) / 3;
+    int h = (19 * a + b - d - g + 15) % 30;
+    int i = c / 4;
+    int k = c % 4;
+    int L = (32 + 2 * e + 2 * i - h - k) % 7;
+    int m = (a + 11 * h + 22 * L) / 451;
+    int month = (h + L - 7 * m + 114) / 31;
+    int day = ((h + L - 7 * m + 114) % 31) + 1;
+    return DateTime(day, month, y);
+}
+
+DateTime DateTime::orthodoxEaster(int y) {
+    int a = y % 19;
+    int b = y % 4;
+    int c = y % 7;
+    int d = (19 * a + 15) % 30;
+    int e = (2 * b + 4 * c + 6 * d + 6) % 7;
+    int f = d + e;
+    
+    int day, month;
+    if (f <= 9) {
+        day = 22 + f;
+        month = 3;
+    } else {
+        day = f - 9;
+        month = 4;
+    }
+    
+    day += 13;
+    int daysInApril = 30;
+    if (month == 3 && day > 31) {
+        day -= 31;
+        month = 4;
+    } else if (month == 4 && day > daysInApril) {
+        day -= daysInApril;
+        month = 5;
+    }
+    
+    return DateTime(day, month, y);
 }
