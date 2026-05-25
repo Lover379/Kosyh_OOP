@@ -1,10 +1,7 @@
 #pragma once
 #include <iostream>
 
-using namespace std;
-
-class DateTime
-{
+class DateTime {
 private:
     int dy;
     int mn;
@@ -34,5 +31,4 @@ public:
 
     static DateTime catholikEaster(int y);
     static DateTime orthodoxEaster(int y);
-}; 
-
+};
