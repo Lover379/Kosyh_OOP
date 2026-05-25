@@ -1,5 +1,5 @@
 #define _CRT_SECURE_NO_WARNINGS
-#include "datetime.h"
+#include "Pro_lunu.h"
 #include <iomanip>
 #include <cmath>
 
@@ -7,8 +7,9 @@ using namespace std;
 
 DateTime::DateTime() : dy(1), mn(1), yr(2000), hr(0), min(0), sec(0) {}
 
-DateTime::DateTime(int d, int m, int y, int hh, int mm, int ss) 
-    : dy(d), mn(m), yr(y), hr(hh), min(mm), sec(ss) {}
+DateTime::DateTime(int d, int m, int y, int hh, int mm, int ss)
+    : dy(d), mn(m), yr(y), hr(hh), min(mm), sec(ss) {
+}
 
 bool DateTime::leapYear(int y) const {
     return (y % 4 == 0 && y % 100 != 0) || (y % 400 == 0);
@@ -41,7 +42,7 @@ void DateTime::inputDate() {
 
 void DateTime::showFormat1() const {
     cout << setfill('0') << setw(2) << dy << "."
-         << setw(2) << mn << "." << yr << " ";
+        << setw(2) << mn << "." << yr << " ";
 }
 
 void DateTime::showFormat2() const {
@@ -68,7 +69,7 @@ const char* DateTime::weekDay() const {
     int k = y % 100;
     int j = y / 100;
     int h = (q + 13 * (m + 1) / 5 + k + k / 4 + j / 4 + 5 * j) % 7;
-    
+
     const char* days[] = { "Суббота", "Воскресенье", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница" };
     return days[h];
 }
@@ -113,25 +114,27 @@ DateTime DateTime::orthodoxEaster(int y) {
     int d = (19 * a + 15) % 30;
     int e = (2 * b + 4 * c + 6 * d + 6) % 7;
     int f = d + e;
-    
+
     int day, month;
     if (f <= 9) {
         day = 22 + f;
         month = 3;
-    } else {
+    }
+    else {
         day = f - 9;
         month = 4;
     }
-    
+
     day += 13;
     int daysInApril = 30;
     if (month == 3 && day > 31) {
         day -= 31;
         month = 4;
-    } else if (month == 4 && day > daysInApril) {
+    }
+    else if (month == 4 && day > daysInApril) {
         day -= daysInApril;
         month = 5;
     }
-    
+
     return DateTime(day, month, y);
 }
